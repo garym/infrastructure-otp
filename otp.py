@@ -193,13 +193,27 @@ def main():
   print('Response:', response)
 
   osname = platform.system()
+  encoded = response.encode()
 
   # Attempt to push this to the clipboard
+  result = None
   if osname == 'Darwin':
-    result = subprocess.run(['pbcopy', '-pboard', 'general'], input=response.encode())
+    result = subprocess.run(['pbcopy', '-pboard', 'general'], input=encoded)
+  elif osname == 'Windows':
+    result = subprocess.run(['clip'], input=encoded)
   else:
-    result = subprocess.run(['xclip', '-selection', 'clipboard'], input=response.encode())
-  if result.returncode == 0:
+    clipboard_commands = [
+      ['xclip', '-selection', 'clipboard'],
+      ['xsel', '--input', '--clipboard'],
+    ]
+
+    for command in clipboard_commands:
+      found = subprocess.run(['which', command[0]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+      if found.returncode == 0:
+        result = subprocess.run(command, input=encoded)
+        break
+
+  if result is not None and result.returncode == 0:
     print('NOTE: copied to clipboard')
 
 
